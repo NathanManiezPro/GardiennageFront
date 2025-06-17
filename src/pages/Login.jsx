@@ -8,6 +8,7 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
+    
     e.preventDefault();
 
     try {
@@ -21,10 +22,13 @@ export default function Login() {
 
       // Redirection selon le rôle
       if (user.role === 'admin') {
-        navigate('/admin');
+      localStorage.setItem("user", JSON.stringify(user));
+      navigate('/admin');
       } else {
-        navigate('/cars'); // ou une autre page client
+      localStorage.setItem("user", JSON.stringify(user));
+      navigate('/cars');
       }
+
     } catch (err) {
       console.error('Erreur connexion :', err);
       alert('Identifiants incorrects');

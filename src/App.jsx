@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import NavBar from './components/NavBar';
+import RequireAuth from './components/RequireAuth';
+import RequireAdmin from './components/RequireAdmin';
+import RequireClient from './components/RequireClient';
 
 import Home from './pages/Home';
 import Cars from './pages/Cars';
@@ -19,18 +22,86 @@ function App() {
       <NavBar />
       <div style={{ padding: '1rem' }}>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/cars" element={<Cars />} />
-          <Route path="/tickets" element={<Tickets />} />
-          <Route path="/reservations" element={<Reservations />} />
-          <Route path="/subscriptions" element={<Subscriptions />} />
+          {/* Public */}
           <Route path="/login" element={<Login />} />
 
-          {/* Admin panel */}
-          <Route path="/admin" element={<Dashboard />} />
-          <Route path="/admin/users" element={<UsersList />} />
-          <Route path="/admin/cars" element={<CarsAdmin />} />
-          <Route path="/admin/tickets" element={<TicketsAdmin />} />
+          {/* Authentifié (client ou admin) */}
+          <Route
+            path="/"
+            element={
+              <RequireAuth>
+                <Home />
+              </RequireAuth>
+            }
+          />
+
+          {/* Client uniquement */}
+          <Route
+            path="/cars"
+            element={
+              <RequireClient>
+                <Cars />
+              </RequireClient>
+            }
+          />
+          <Route
+            path="/tickets"
+            element={
+              <RequireClient>
+                <Tickets />
+              </RequireClient>
+            }
+          />
+          <Route
+            path="/reservations"
+            element={
+              <RequireClient>
+                <Reservations />
+              </RequireClient>
+            }
+          />
+          <Route
+            path="/subscriptions"
+            element={
+              <RequireClient>
+                <Subscriptions />
+              </RequireClient>
+            }
+          />
+
+          {/* Admin uniquement */}
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <Dashboard />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <RequireAdmin>
+                <UsersList />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/cars"
+            element={
+              <RequireAdmin>
+                <CarsAdmin />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/tickets"
+            element={
+              <RequireAdmin>
+                <TicketsAdmin />
+              </RequireAdmin>
+            }
+          />
         </Routes>
       </div>
     </BrowserRouter>
