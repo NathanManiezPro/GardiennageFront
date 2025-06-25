@@ -40,7 +40,6 @@ export default function UsersList() {
       } else {
         await api.post("/users/register", newUser);
       }
-
       setNewUser({
         nom: "",
         email: "",
@@ -76,7 +75,7 @@ export default function UsersList() {
     }
   };
 
-  // Pagination logic
+  // Pagination
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);

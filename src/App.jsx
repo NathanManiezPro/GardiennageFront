@@ -22,10 +22,10 @@ function App() {
       <NavBar />
       <div style={{ padding: '1rem' }}>
         <Routes>
-          {/* Public */}
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
 
-          {/* Authentifié (client ou admin) */}
+          {/* Authenticated Routes (client or admin) */}
           <Route
             path="/"
             element={
@@ -35,7 +35,7 @@ function App() {
             }
           />
 
-          {/* Client uniquement */}
+          {/* Client Routes */}
           <Route
             path="/cars"
             element={
@@ -69,7 +69,7 @@ function App() {
             }
           />
 
-          {/* Admin uniquement */}
+          {/* Admin Routes */}
           <Route
             path="/admin"
             element={
