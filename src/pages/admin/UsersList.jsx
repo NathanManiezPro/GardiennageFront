@@ -3,17 +3,26 @@ import api from "../../api/axios";
 
 export default function UsersList() {
   const [users, setUsers] = useState([]);
+  const [abonnements, setAbonnements] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [sortColumn, setSortColumn] = useState("id");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
+
   const [newUser, setNewUser] = useState({
     nom: "",
     email: "",
     telephone: "",
     password: "",
     role: "client",
+    abonnement: "",
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const usersPerPage = 10;
+  useEffect(() => {
+    fetchUsers();
+    fetchAbonnements();
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -24,9 +33,14 @@ export default function UsersList() {
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const fetchAbonnements = async () => {
+    try {
+      const res = await api.get("/subscriptions");
+      setAbonnements(res.data);
+    } catch (err) {
+      console.error("Erreur récupération abonnements :", err);
+    }
+  };
 
   const handleChange = (e) => {
     setNewUser({ ...newUser, [e.target.name]: e.target.value });
@@ -36,19 +50,49 @@ export default function UsersList() {
     e.preventDefault();
     try {
       if (editingId) {
-        await api.put(`/users/${editingId}`, newUser);
+        const dataToUpdate = { ...newUser };
+        if (!newUser.password) delete dataToUpdate.password;
+        await api.put(`/users/${editingId}`, dataToUpdate);
+        if (newUser.role === "client" && newUser.abonnement) {
+          const existing = abonnements.find(a => a.clientId === editingId);
+          const now = new Date();
+          const fin = new Date();
+          fin.setFullYear(now.getFullYear() + 1);
+
+          if (existing) {
+            await api.put(`/subscriptions/${existing.id}`, {
+              type: newUser.abonnement,
+              dateDebut: now,
+              dateFin: fin,
+              clientId: editingId,
+            });
+          } else {
+            await api.post("/subscriptions", {
+              type: newUser.abonnement,
+              dateDebut: now,
+              dateFin: fin,
+              clientId: editingId,
+            });
+          }
+        }
       } else {
-        await api.post("/users/register", newUser);
+        await api.post("/users/register", {
+          ...newUser,
+          typeAbonnement: newUser.abonnement,
+        });
       }
+
       setNewUser({
         nom: "",
         email: "",
         telephone: "",
         password: "",
         role: "client",
+        abonnement: "",
       });
       setEditingId(null);
       fetchUsers();
+      fetchAbonnements();
     } catch (err) {
       console.error("Erreur création/modification utilisateur :", err);
     }
@@ -62,6 +106,7 @@ export default function UsersList() {
       telephone: user.telephone,
       password: "",
       role: user.role,
+      abonnement: abonnements.find((a) => a.clientId === user.id)?.type || "",
     });
   };
 
@@ -70,16 +115,42 @@ export default function UsersList() {
     try {
       await api.delete(`/users/${id}`);
       fetchUsers();
+      fetchAbonnements();
     } catch (err) {
       console.error("Erreur suppression utilisateur :", err);
     }
   };
 
-  // Pagination
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const sortedUsers = [...users].sort((a, b) => {
+    let valA = a[sortColumn];
+    let valB = b[sortColumn];
+
+    if (sortColumn === "abonnement") {
+      valA = abonnements.find((ab) => ab.clientId === a.id)?.type || "";
+      valB = abonnements.find((ab) => ab.clientId === b.id)?.type || "";
+    }
+
+    if (typeof valA === "string") {
+      return sortDirection === "asc"
+        ? valA.localeCompare(valB)
+        : valB.localeCompare(valA);
+    }
+    return sortDirection === "asc" ? valA - valB : valB - valA;
+  });
+
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(users.length / usersPerPage);
+  const currentUsers = sortedUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(sortedUsers.length / usersPerPage);
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -95,50 +166,25 @@ export default function UsersList() {
             {editingId ? "✏️ Modifier l’utilisateur" : "➕ Ajouter un utilisateur"}
           </h3>
 
-          <input
-            className="border border-gray-300 rounded px-3 py-2"
-            name="nom"
-            placeholder="Nom"
-            value={newUser.nom}
-            onChange={handleChange}
-          />
-          <input
-            className="border border-gray-300 rounded px-3 py-2"
-            name="email"
-            placeholder="Email"
-            value={newUser.email}
-            onChange={handleChange}
-          />
-          <input
-            className="border border-gray-300 rounded px-3 py-2"
-            name="telephone"
-            placeholder="Téléphone"
-            value={newUser.telephone}
-            onChange={handleChange}
-          />
-          <input
-            className="border border-gray-300 rounded px-3 py-2"
-            name="password"
-            type="password"
-            placeholder="Mot de passe"
-            value={newUser.password}
-            onChange={handleChange}
-          />
-          <select
-            className="border border-gray-300 rounded px-3 py-2"
-            name="role"
-            value={newUser.role}
-            onChange={handleChange}
-          >
+          <input className="border rounded px-3 py-2" name="nom" placeholder="Nom" value={newUser.nom} onChange={handleChange} />
+          <input className="border rounded px-3 py-2" name="email" placeholder="Email" value={newUser.email} onChange={handleChange} />
+          <input className="border rounded px-3 py-2" name="telephone" placeholder="Téléphone" value={newUser.telephone} onChange={handleChange} />
+          <input className="border rounded px-3 py-2" name="password" type="password" placeholder="Mot de passe" value={newUser.password} onChange={handleChange} />
+          <select className="border rounded px-3 py-2" name="role" value={newUser.role} onChange={handleChange}>
             <option value="client">Client</option>
             <option value="admin">Admin</option>
           </select>
+          {newUser.role === "client" && (
+            <select className="border rounded px-3 py-2" name="abonnement" value={newUser.abonnement} onChange={handleChange}>
+              <option value="">Sélectionner un abonnement</option>
+              <option value="Gardiennage + Réparation">Gardiennage + Réparation</option>
+              <option value="Gardiennage bâché + Réparation">Gardiennage bâché + Réparation</option>
+              <option value="Gardiennage bulle + Réparation">Gardiennage bulle + Réparation</option>
+            </select>
+          )}
 
           <div className="flex gap-2">
-            <button
-              type="submit"
-              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-            >
+            <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
               {editingId ? "Mettre à jour" : "Créer"}
             </button>
             {editingId && (
@@ -147,13 +193,7 @@ export default function UsersList() {
                 className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
                 onClick={() => {
                   setEditingId(null);
-                  setNewUser({
-                    nom: "",
-                    email: "",
-                    telephone: "",
-                    password: "",
-                    role: "client",
-                  });
+                  setNewUser({ nom: "", email: "", telephone: "", password: "", role: "client", abonnement: "" });
                 }}
               >
                 Annuler
@@ -167,20 +207,23 @@ export default function UsersList() {
           <table className="w-full text-sm text-left border border-gray-200">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
-                <th className="p-3 border">ID</th>
-                <th className="p-3 border">Nom</th>
-                <th className="p-3 border">Email</th>
-                <th className="p-3 border">Téléphone</th>
-                <th className="p-3 border">Rôle</th>
+                {["id", "nom", "email", "telephone", "abonnement", "role"].map((col) => (
+                  <th
+                    key={col}
+                    className="p-3 border cursor-pointer"
+                    onClick={() => handleSort(col)}
+                  >
+                    {col.charAt(0).toUpperCase() + col.slice(1)}{" "}
+                    {sortColumn === col && (sortDirection === "asc" ? "↑" : "↓")}
+                  </th>
+                ))}
                 <th className="p-3 border">Actions</th>
               </tr>
             </thead>
             <tbody>
               {currentUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center p-4">
-                    Aucun utilisateur trouvé
-                  </td>
+                  <td colSpan="7" className="text-center p-4">Aucun utilisateur trouvé</td>
                 </tr>
               ) : (
                 currentUsers.map((u) => (
@@ -189,20 +232,15 @@ export default function UsersList() {
                     <td className="p-3 border">{u.nom}</td>
                     <td className="p-3 border">{u.email}</td>
                     <td className="p-3 border">{u.telephone}</td>
+                    <td className="p-3 border">
+                      {u.role === "client"
+                        ? abonnements.find((a) => a.clientId === u.id)?.type || "Non défini"
+                        : "-"}
+                    </td>
                     <td className="p-3 border capitalize">{u.role}</td>
                     <td className="p-3 border flex gap-2">
-                      <button
-                        onClick={() => handleEdit(u)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => handleDelete(u.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        🗑
-                      </button>
+                      <button onClick={() => handleEdit(u)} className="text-blue-600 hover:text-blue-800">✏️</button>
+                      <button onClick={() => handleDelete(u.id)} className="text-red-600 hover:text-red-800">🗑</button>
                     </td>
                   </tr>
                 ))
@@ -214,21 +252,11 @@ export default function UsersList() {
         {/* PAGINATION */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-6">
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-              disabled={currentPage === 1}
-            >
+            <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300" disabled={currentPage === 1}>
               ⬅ Précédent
             </button>
-            <span className="px-4 text-sm">
-              Page {currentPage} / {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-              disabled={currentPage === totalPages}
-            >
+            <span className="px-4 text-sm">Page {currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300" disabled={currentPage === totalPages}>
               Suivant ➡
             </button>
           </div>
