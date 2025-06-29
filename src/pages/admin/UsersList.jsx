@@ -4,6 +4,11 @@ import api from "../../api/axios";
 export default function UsersList() {
   const [users, setUsers] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [sortColumn, setSortColumn] = useState("id");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
+
   const [newUser, setNewUser] = useState({
     nom: "",
     email: "",
@@ -12,8 +17,9 @@ export default function UsersList() {
     role: "client",
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const usersPerPage = 10;
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -24,10 +30,6 @@ export default function UsersList() {
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const handleChange = (e) => {
     setNewUser({ ...newUser, [e.target.name]: e.target.value });
   };
@@ -36,19 +38,14 @@ export default function UsersList() {
     e.preventDefault();
     try {
       if (editingId) {
-        await api.put(`/users/${editingId}`, newUser);
+        const dataToUpdate = { ...newUser };
+        if (!dataToUpdate.password) delete dataToUpdate.password;
+        await api.put(`/users/${editingId}`, dataToUpdate);
       } else {
         await api.post("/users/register", newUser);
       }
-
-      setNewUser({
-        nom: "",
-        email: "",
-        telephone: "",
-        password: "",
-        role: "client",
-      });
       setEditingId(null);
+      setNewUser({ nom: "", email: "", telephone: "", password: "", role: "client" });
       fetchUsers();
     } catch (err) {
       console.error("Erreur création/modification utilisateur :", err);
@@ -76,11 +73,32 @@ export default function UsersList() {
     }
   };
 
-  // Pagination logic
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  // Tri des utilisateurs
+  const sortedUsers = [...users].sort((a, b) => {
+    let valA = a[sortColumn];
+    let valB = b[sortColumn];
+    if (typeof valA === "string") {
+      return sortDirection === "asc"
+        ? valA.localeCompare(valB)
+        : valB.localeCompare(valA);
+    }
+    return sortDirection === "asc" ? valA - valB : valB - valA;
+  });
+
+  // Pagination
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(users.length / usersPerPage);
+  const currentUsers = sortedUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(sortedUsers.length / usersPerPage);
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -93,32 +111,32 @@ export default function UsersList() {
           className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4 items-end"
         >
           <h3 className="col-span-full text-xl font-medium mb-2">
-            {editingId ? "✏️ Modifier l’utilisateur" : "➕ Ajouter un utilisateur"}
+            {editingId ? "✏️ Modifier un utilisateur" : "➕ Ajouter un utilisateur"}
           </h3>
 
           <input
-            className="border border-gray-300 rounded px-3 py-2"
+            className="border rounded px-3 py-2"
             name="nom"
             placeholder="Nom"
             value={newUser.nom}
             onChange={handleChange}
           />
           <input
-            className="border border-gray-300 rounded px-3 py-2"
+            className="border rounded px-3 py-2"
             name="email"
             placeholder="Email"
             value={newUser.email}
             onChange={handleChange}
           />
           <input
-            className="border border-gray-300 rounded px-3 py-2"
+            className="border rounded px-3 py-2"
             name="telephone"
             placeholder="Téléphone"
             value={newUser.telephone}
             onChange={handleChange}
           />
           <input
-            className="border border-gray-300 rounded px-3 py-2"
+            className="border rounded px-3 py-2"
             name="password"
             type="password"
             placeholder="Mot de passe"
@@ -126,7 +144,7 @@ export default function UsersList() {
             onChange={handleChange}
           />
           <select
-            className="border border-gray-300 rounded px-3 py-2"
+            className="border rounded px-3 py-2"
             name="role"
             value={newUser.role}
             onChange={handleChange}
@@ -148,13 +166,7 @@ export default function UsersList() {
                 className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
                 onClick={() => {
                   setEditingId(null);
-                  setNewUser({
-                    nom: "",
-                    email: "",
-                    telephone: "",
-                    password: "",
-                    role: "client",
-                  });
+                  setNewUser({ nom: "", email: "", telephone: "", password: "", role: "client" });
                 }}
               >
                 Annuler
@@ -168,11 +180,16 @@ export default function UsersList() {
           <table className="w-full text-sm text-left border border-gray-200">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
-                <th className="p-3 border">ID</th>
-                <th className="p-3 border">Nom</th>
-                <th className="p-3 border">Email</th>
-                <th className="p-3 border">Téléphone</th>
-                <th className="p-3 border">Rôle</th>
+                {["id", "nom", "email", "telephone", "role"].map((col) => (
+                  <th
+                    key={col}
+                    className="p-3 border cursor-pointer"
+                    onClick={() => handleSort(col)}
+                  >
+                    {col.charAt(0).toUpperCase() + col.slice(1)}{" "}
+                    {sortColumn === col && (sortDirection === "asc" ? "↑" : "↓")}
+                  </th>
+                ))}
                 <th className="p-3 border">Actions</th>
               </tr>
             </thead>
@@ -192,16 +209,10 @@ export default function UsersList() {
                     <td className="p-3 border">{u.telephone}</td>
                     <td className="p-3 border capitalize">{u.role}</td>
                     <td className="p-3 border flex gap-2">
-                      <button
-                        onClick={() => handleEdit(u)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
+                      <button onClick={() => handleEdit(u)} className="text-blue-600 hover:text-blue-800">
                         ✏️
                       </button>
-                      <button
-                        onClick={() => handleDelete(u.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
+                      <button onClick={() => handleDelete(u.id)} className="text-red-600 hover:text-red-800">
                         🗑
                       </button>
                     </td>
@@ -216,7 +227,7 @@ export default function UsersList() {
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-6">
             <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
               disabled={currentPage === 1}
             >
@@ -226,7 +237,7 @@ export default function UsersList() {
               Page {currentPage} / {totalPages}
             </span>
             <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
               className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
               disabled={currentPage === totalPages}
             >
@@ -236,5 +247,5 @@ export default function UsersList() {
         )}
       </div>
     </div>
-  );
+);
 }

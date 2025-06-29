@@ -8,27 +8,26 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    
     e.preventDefault();
 
     try {
       const res = await api.post('/users/login', { email, password });
-      const { user } = res.data;
+      const { token, user } = res.data;
 
-      if (!user) {
+      if (!user || !token) {
         alert('Erreur de connexion');
         return;
       }
 
-      // Redirection selon le rôle
-      if (user.role === 'admin') {
-      localStorage.setItem("user", JSON.stringify(user));
-      navigate('/admin');
-      } else {
-      localStorage.setItem("user", JSON.stringify(user));
-      navigate('/cars');
-      }
+      // 🔐 Stockage dans un seul objet
+      localStorage.setItem('user', JSON.stringify({ ...user, token }));
 
+      // 🔀 Redirection selon le rôle
+      if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/cars');
+      }
     } catch (err) {
       console.error('Erreur connexion :', err);
       alert('Identifiants incorrects');

@@ -1,3 +1,4 @@
+// src/App.jsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import NavBar from './components/NavBar';
 import RequireAuth from './components/RequireAuth';
@@ -15,6 +16,7 @@ import Dashboard from './pages/admin/Dashboard';
 import UsersList from './pages/admin/UsersList';
 import CarsAdmin from './pages/admin/CarsAdmin';
 import TicketsAdmin from './pages/admin/TicketsAdmin';
+import TicketsDetailAdmin from './pages/admin/TicketsDetailAdmin';
 
 function App() {
   return (
@@ -22,10 +24,10 @@ function App() {
       <NavBar />
       <div style={{ padding: '1rem' }}>
         <Routes>
-          {/* Public */}
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
 
-          {/* Authentifié (client ou admin) */}
+          {/* Authenticated Routes (client or admin) */}
           <Route
             path="/"
             element={
@@ -35,7 +37,7 @@ function App() {
             }
           />
 
-          {/* Client uniquement */}
+          {/* Client Routes */}
           <Route
             path="/cars"
             element={
@@ -46,6 +48,15 @@ function App() {
           />
           <Route
             path="/tickets"
+            element={
+              <RequireClient>
+                <Tickets />
+              </RequireClient>
+            }
+          />
+          {/* Création de ticket (redirigé depuis Subscription.jsx) */}
+          <Route
+            path="/tickets/create"
             element={
               <RequireClient>
                 <Tickets />
@@ -69,7 +80,7 @@ function App() {
             }
           />
 
-          {/* Admin uniquement */}
+          {/* Admin Routes */}
           <Route
             path="/admin"
             element={
@@ -99,6 +110,15 @@ function App() {
             element={
               <RequireAdmin>
                 <TicketsAdmin />
+              </RequireAdmin>
+            }
+          />
+          {/* Détail / réponse admin d’un ticket */}
+          <Route
+            path="/admin/tickets/:id"
+            element={
+              <RequireAdmin>
+                <TicketsDetailAdmin />
               </RequireAdmin>
             }
           />
