@@ -12,18 +12,17 @@ export default function Login() {
 
     try {
       const res = await api.post('/users/login', { email, password });
-      const { token, user } = res.data;  // Déstructure le token et l'utilisateur
+      const { token, user } = res.data;
 
       if (!user || !token) {
         alert('Erreur de connexion');
         return;
       }
 
-      // Stocke le token JWT dans localStorage
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      // 🔐 Stockage dans un seul objet
+      localStorage.setItem('user', JSON.stringify({ ...user, token }));
 
-      // Redirection selon le rôle
+      // 🔀 Redirection selon le rôle
       if (user.role === 'admin') {
         navigate('/admin');
       } else {

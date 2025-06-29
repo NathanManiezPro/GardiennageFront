@@ -1,97 +1,105 @@
+// src/pages/Tickets.jsx
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 
 export default function Tickets() {
-  const [voitures, setVoitures] = useState([]);
-  const [selectedVoiture, setSelectedVoiture] = useState("");
-  const [raison, setRaison] = useState("Abonnement");
-  const [typeDemande, setTypeDemande] = useState("");
-  const [message, setMessage] = useState("");
   const [tickets, setTickets] = useState([]);
+  const [voitures, setVoitures] = useState([]);
+  const [message, setMessage] = useState("");
+  const [type, setType] = useState("");
+  const [voitureId, setVoitureId] = useState("");
+  const [clientResponse, setClientResponse] = useState({});
+  const [error, setError] = useState("");
 
   const user = JSON.parse(localStorage.getItem("user"));
 
   useEffect(() => {
-    if (!user?.id) return;
-
-    const fetchVoitures = async () => {
-      const res = await api.get("/cars");
-      const userCars = res.data.filter((car) => car.clientId === user.id);
-      setVoitures(userCars);
-    };
-
-    const fetchTickets = async () => {
-      const res = await api.get("/tickets");
-      const userTickets = res.data.filter((t) => t.car.clientId === user.id);
-      setTickets(userTickets.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation)));
-    };
-
-    fetchVoitures();
     fetchTickets();
-  }, [user]);
+    fetchVoitures();
+  }, []);
 
-  const handleSubmit = async (e) => {
+  const fetchTickets = async () => {
+    try {
+      const res = await api.get("/tickets");
+      const clientTickets = res.data.filter((t) => t.clientId === user.id);
+      setTickets(clientTickets);
+    } catch (err) {
+      console.error("Erreur récupération tickets :", err);
+    }
+  };
+
+  const fetchVoitures = async () => {
+    try {
+      const res = await api.get("/cars");
+      const cars = res.data.filter((c) => c.clientId === user.id);
+      setVoitures(cars);
+    } catch (err) {
+      console.error("Erreur récupération voitures :", err);
+    }
+  };
+
+  const handleCreate = async (e) => {
     e.preventDefault();
-    if (!selectedVoiture || !raison || !message) return;
+    try {
+  await api.post('/tickets', {
+    type,
+    message,
+    voitureId,
+    clientId: user.id,
+  });
+  setType('');
+  setMessage('');
+  setVoitureId('');
+  fetchTickets(); // recharge l'historique
+} catch (err) {
+  console.error("Erreur création ticket :", err);
+  setError("Erreur création ticket");
+}
 
-    await api.post("/tickets", {
-      type: raison === "Abonnement" ? `${raison} - ${typeDemande}` : raison,
-      dateCreation: new Date(),
-      statut: "non résolu",
-      voitureId: selectedVoiture
-    });
+  };
 
-    setMessage("");
-    setSelectedVoiture("");
-    setTypeDemande("");
-    // Refresh tickets
-    const res = await api.get("/tickets");
-    const userTickets = res.data.filter((t) => t.car.clientId === user.id);
-    setTickets(userTickets.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation)));
+  const handleClientResponse = async (ticketId) => {
+    try {
+      await api.put(`/tickets/${ticketId}/client-response`, {
+        response: clientResponse[ticketId],
+      });
+      setClientResponse({ ...clientResponse, [ticketId]: "" });
+      fetchTickets();
+    } catch (err) {
+      console.error("Erreur envoi réponse client :", err);
+    }
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Mes tickets</h1>
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-4 rounded shadow">
+    <div className="p-6 max-w-4xl mx-auto">
+      <h2 className="text-2xl font-semibold mb-4">🎫 Vos Tickets</h2>
+
+      {/* Création Ticket */}
+      <form onSubmit={handleCreate} className="space-y-4 mb-8">
         <div>
-          <label className="block font-semibold mb-1">Raison :</label>
+          <label className="block font-medium">Type de demande</label>
           <select
-            value={raison}
-            onChange={(e) => setRaison(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="border px-3 py-2 w-full"
+            required
           >
-            <option>Abonnement</option>
-            <option>Maintenance</option>
-            <option>Facturation</option>
-            <option>Autre</option>
+            <option value="">Sélectionner</option>
+            <option value="Abonnement">Abonnement</option>
+            <option value="Réparation">Réparation</option>
+            <option value="Question générale">Question générale</option>
           </select>
         </div>
 
-        {raison === "Abonnement" && (
-          <div>
-            <label className="block font-semibold mb-1">Type de demande :</label>
-            <select
-              value={typeDemande}
-              onChange={(e) => setTypeDemande(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            >
-              <option value="">Choisir une option</option>
-              <option value="Changement d'abonnement">Changement d'abonnement</option>
-              <option value="Question sur mon abonnement">Question sur mon abonnement</option>
-              <option value="Autre">Autre</option>
-            </select>
-          </div>
-        )}
-
         <div>
-          <label className="block font-semibold mb-1">Voiture concernée :</label>
+          <label className="block font-medium">Voiture concernée</label>
           <select
-            value={selectedVoiture}
-            onChange={(e) => setSelectedVoiture(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            value={voitureId}
+            onChange={(e) => setVoitureId(e.target.value)}
+            className="border px-3 py-2 w-full"
+            required
           >
-            <option value="">Choisir une voiture</option>
+            <option value="">Sélectionner une voiture</option>
             {voitures.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.marque} {v.modele} ({v.plaqueImmatriculation})
@@ -101,37 +109,77 @@ export default function Tickets() {
         </div>
 
         <div>
-          <label className="block font-semibold mb-1">Message :</label>
+          <label className="block font-medium">Message</label>
           <textarea
-            className="w-full border border-gray-300 rounded px-3 py-2"
-            rows={4}
-            placeholder="Décrivez votre problème"
+            className="border px-3 py-2 w-full"
+            rows="4"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-          ></textarea>
+            required
+          />
         </div>
 
-        <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
-          Envoyer le ticket
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Envoyer
         </button>
+        {error && <p className="text-red-600 mt-2">{error}</p>}
       </form>
 
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-2">Historique</h2>
+      {/* Liste des tickets */}
+      <div className="space-y-4">
         {tickets.length === 0 ? (
-          <p className="text-gray-500">Aucun ticket pour le moment.</p>
+          <p>Vous n’avez encore aucun ticket.</p>
         ) : (
-          <ul className="space-y-2">
-            {tickets.map((t) => (
-              <li key={t.id} className="p-4 border rounded shadow-sm">
-                <div className="font-semibold">{t.type}</div>
-                <div className="text-sm text-gray-500">État : {t.statut}</div>
-                <div className="text-sm text-gray-500">
-                  Date : {new Date(t.dateCreation).toLocaleString()}
+          tickets
+            .sort(
+              (a, b) => new Date(b.dateCreation) - new Date(a.dateCreation)
+            )
+            .map((t) => (
+              <div
+                key={t.id}
+                className="border rounded-lg p-4 bg-white shadow-md"
+              >
+                <div className="mb-2">
+                  <strong>{t.type}</strong> –{" "}
+                  <span className="italic text-sm">{t.statut}</span>
                 </div>
-              </li>
-            ))}
-          </ul>
+                <div className="mb-2">
+                  <p className="text-gray-700">{t.message}</p>
+                </div>
+                {t.adminResponse && (
+                  <div className="mb-2 bg-gray-50 p-2 rounded">
+                    <strong>Réponse admin :</strong> {t.adminResponse}
+                  </div>
+                )}
+
+                {/* Réponse client */}
+                {t.statut !== "Fermé" && (
+                  <div className="mt-2">
+                    <textarea
+                      rows="2"
+                      className="border w-full px-2 py-1 mb-2"
+                      placeholder="Votre réponse..."
+                      value={clientResponse[t.id] || ""}
+                      onChange={(e) =>
+                        setClientResponse({
+                          ...clientResponse,
+                          [t.id]: e.target.value,
+                        })
+                      }
+                    />
+                    <button
+                      onClick={() => handleClientResponse(t.id)}
+                      className="bg-green-600 text-white px-3 py-1 rounded"
+                    >
+                      Envoyer réponse
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
         )}
       </div>
     </div>

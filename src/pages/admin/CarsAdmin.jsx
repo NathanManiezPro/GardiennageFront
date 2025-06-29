@@ -8,6 +8,7 @@ export default function CarsAdmin() {
   const [error, setError] = useState(null);
   const [carIdEnEdition, setCarIdEnEdition] = useState(null);
 
+  // ta liste complète de marques & modèles
   const voituresDeLuxe = [
     { marque: "Ferrari", models: ["488", "F8 Tributo", "Portofino", "LaFerrari", "Roma", "SF90 Stradale"] },
     { marque: "Lamborghini", models: ["Aventador", "Huracán", "Urus", "Sián", "Centenario"] },
@@ -26,6 +27,13 @@ export default function CarsAdmin() {
     { marque: "Jaguar", models: ["F-Type", "XJ", "I-PACE", "F-PACE", "XE"] }
   ];
 
+  // options d'abonnement pour la voiture
+  const abonnementsOptions = [
+    "Gardiennage + Réparation",
+    "Gardiennage bâché + Réparation",
+    "Gardiennage bulle + Réparation",
+  ];
+
   const [newCar, setNewCar] = useState({
     marque: "",
     modele: "",
@@ -34,58 +42,70 @@ export default function CarsAdmin() {
     dateEntree: "",
     statut: "gardiennage",
     clientId: "",
+    abonnementType: "",
   });
-
-  const [marques] = useState(voituresDeLuxe.map(car => car.marque));
-
-  const formatPlaque = (value) => {
-    let formattedValue = value.replace(/[^A-Z0-9]/g, "").toUpperCase();
-    formattedValue = formattedValue.substring(0, 2) + (formattedValue.length > 2 ? '-' : '') + formattedValue.substring(2, 5) + (formattedValue.length > 5 ? '-' : '') + formattedValue.substring(5, 7);
-    return formattedValue.substring(0, 10);
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    let v = value;
     if (name === "plaqueImmatriculation") {
-      setNewCar({ ...newCar, [name]: formatPlaque(value) });
-    } else {
-      setNewCar({ ...newCar, [name]: value });
+      v = value
+        .replace(/[^A-Z0-9]/gi, "")
+        .toUpperCase()
+        .slice(0, 7)
+        .replace(/^(.{2})(.{3})/, "$1-$2-");
     }
+    setNewCar((prev) => ({ ...prev, [name]: v }));
 
     if (name === "marque") {
       setNewCar((prev) => ({ ...prev, modele: "" }));
-      const marqueSelectionnee = voituresDeLuxe.find((car) => car.marque === value);
-      setModeles(marqueSelectionnee ? marqueSelectionnee.models : []);
+      const found = voituresDeLuxe.find((c) => c.marque === value);
+      setModeles(found ? found.models : []);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const res = await api.get("/users");
+      setClients(res.data.filter((u) => u.role === "client"));
+    } catch (err) {
+      console.error("Erreur récupération clients :", err);
+      setError("Erreur récupération clients");
+    }
+  };
+
+  const fetchCars = async () => {
+    try {
+      const res = await api.get("/cars");
+      setCars(res.data);
+    } catch (err) {
+      console.error("Erreur récupération voitures :", err);
+      setError("Erreur récupération voitures");
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
 
-    const plaqueRegex = /^[A-Z]{2}-\d{3}-[A-Z]{2}$/;
-    if (!plaqueRegex.test(newCar.plaqueImmatriculation)) {
-      setError("La plaque d'immatriculation doit suivre le format AA-123-AA.");
-      return;
-    }
-
-    const carPayload = {
+    const payload = {
       ...newCar,
       annee: parseInt(newCar.annee),
       clientId: parseInt(newCar.clientId),
+      abonnementType: newCar.abonnementType || undefined,
     };
 
     try {
       if (carIdEnEdition) {
-        await api.put(`/cars/${carIdEnEdition}`, carPayload);
+        await api.put(`/cars/${carIdEnEdition}`, payload);
       } else {
-        await api.post("/cars", carPayload);
+        await api.post("/cars", payload);
       }
-
       resetForm();
       fetchCars();
     } catch (err) {
-      console.error("Erreur lors de l'enregistrement de la voiture : ", err);
-      setError("Erreur lors de l'enregistrement. Veuillez réessayer.");
+      console.error("Erreur voiture :", err);
+      setError("Erreur lors de l'enregistrement");
     }
   };
 
@@ -98,44 +118,15 @@ export default function CarsAdmin() {
       dateEntree: "",
       statut: "gardiennage",
       clientId: "",
+      abonnementType: "",
     });
     setModeles([]);
     setCarIdEnEdition(null);
     setError(null);
   };
 
-  const fetchClients = async () => {
-    try {
-      const res = await api.get("/users");
-      const onlyClients = res.data.filter((u) => u.role === "client");
-      setClients(onlyClients);
-    } catch (err) {
-      console.error("Erreur récupération des clients : ", err);
-      setError("Erreur lors de la récupération des clients.");
-    }
-  };
-
-  const fetchCars = async () => {
-    try {
-      const res = await api.get("/cars");
-      setCars(res.data);
-    } catch (err) {
-      console.error("Erreur récupération des voitures : ", err);
-      setError("Erreur lors de la récupération des voitures.");
-    }
-  };
-
-  const handleDelete = async (carId) => {
-    try {
-      await api.delete(`/cars/${carId}`);
-      fetchCars();
-    } catch (err) {
-      console.error("Erreur lors de la suppression de la voiture : ", err);
-      setError("Erreur lors de la suppression de la voiture.");
-    }
-  };
-
   const handleEdit = (car) => {
+    setCarIdEnEdition(car.id);
     setNewCar({
       marque: car.marque,
       modele: car.modele,
@@ -143,11 +134,16 @@ export default function CarsAdmin() {
       plaqueImmatriculation: car.plaqueImmatriculation,
       dateEntree: car.dateEntree.split("T")[0],
       statut: car.statut,
-      clientId: car.clientId.toString(), // repasse en string pour le select
+      clientId: car.clientId.toString(),
+      abonnementType: car.abonnements?.[0]?.type || "",
     });
-    const modeleList = voituresDeLuxe.find(v => v.marque === car.marque)?.models || [];
-    setModeles(modeleList);
-    setCarIdEnEdition(car.id);
+    setModeles(voituresDeLuxe.find((v) => v.marque === car.marque)?.models || []);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Supprimer cette voiture ?")) return;
+    await api.delete(`/cars/${id}`);
+    fetchCars();
   };
 
   useEffect(() => {
@@ -165,44 +161,113 @@ export default function CarsAdmin() {
         {error && <div className="text-red-500 mb-4">{error}</div>}
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <select name="marque" value={newCar.marque} onChange={handleChange} className="border px-3 py-2 rounded w-full" required>
+          <select
+            name="marque"
+            value={newCar.marque}
+            onChange={handleChange}
+            className="border px-3 py-2 rounded w-full"
+            required
+          >
             <option value="">Sélectionner une marque</option>
-            {marques.map((marque) => (
-              <option key={marque} value={marque}>{marque}</option>
+            {voituresDeLuxe.map((v) => (
+              <option key={v.marque} value={v.marque}>{v.marque}</option>
             ))}
           </select>
 
-          <select name="modele" value={newCar.modele} onChange={handleChange} className="border px-3 py-2 rounded" required>
+          <select
+            name="modele"
+            value={newCar.modele}
+            onChange={handleChange}
+            className="border px-3 py-2 rounded"
+            required
+          >
             <option value="">Sélectionner un modèle</option>
-            {modeles.map((modele) => (
-              <option key={modele} value={modele}>{modele}</option>
+            {modeles.map((m) => (
+              <option key={m} value={m}>{m}</option>
             ))}
           </select>
 
-          <input type="number" name="annee" placeholder="Année" value={newCar.annee} onChange={handleChange} className="border px-3 py-2 rounded" required />
-          <input type="text" name="plaqueImmatriculation" placeholder="Plaque d'immatriculation" value={newCar.plaqueImmatriculation} onChange={handleChange} className="border px-3 py-2 rounded" required />
-          <input type="date" name="dateEntree" value={newCar.dateEntree} onChange={handleChange} className="border px-3 py-2 rounded" required />
-          <select name="statut" value={newCar.statut} onChange={handleChange} className="border px-3 py-2 rounded" required>
+          <input
+            type="number"
+            name="annee"
+            placeholder="Année"
+            value={newCar.annee}
+            onChange={handleChange}
+            className="border px-3 py-2 rounded"
+            required
+          />
+
+          <input
+            type="text"
+            name="plaqueImmatriculation"
+            placeholder="Plaque d'immatriculation"
+            value={newCar.plaqueImmatriculation}
+            onChange={handleChange}
+            className="border px-3 py-2 rounded"
+            required
+          />
+
+          <input
+            type="date"
+            name="dateEntree"
+            value={newCar.dateEntree}
+            onChange={handleChange}
+            className="border px-3 py-2 rounded"
+            required
+          />
+
+          <select
+            name="statut"
+            value={newCar.statut}
+            onChange={handleChange}
+            className="border px-3 py-2 rounded"
+            required
+          >
             <option value="gardiennage">Gardiennage</option>
             <option value="reparation">Réparation</option>
           </select>
-          <select name="clientId" value={newCar.clientId} onChange={handleChange} className="border px-3 py-2 rounded" required>
+
+          <select
+            name="clientId"
+            value={newCar.clientId}
+            onChange={handleChange}
+            className="border px-3 py-2 rounded"
+            required
+          >
             <option value="">Sélectionner un client</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.nom} - {client.email}
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nom} – {c.email}
               </option>
             ))}
           </select>
 
+          <select
+            name="abonnementType"
+            value={newCar.abonnementType}
+            onChange={handleChange}
+            className="border px-3 py-2 rounded"
+          >
+            <option value="">Sélectionner un abonnement</option>
+            {abonnementsOptions.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+
           <div className="flex gap-4 col-span-2">
-            <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+            <button
+              type="submit"
+              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+            >
               {carIdEnEdition ? "Mettre à jour la voiture" : "Ajouter la voiture"}
             </button>
-
             {carIdEnEdition && (
-              <button type="button" onClick={resetForm} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
-                Annuler la modification
+              <button
+                type="button"
+                onClick={resetForm} 
+                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+              >
+                Annuler
               </button>
             )}
           </div>
@@ -215,14 +280,19 @@ export default function CarsAdmin() {
               <div className="flex justify-between">
                 <strong>{car.marque} {car.modele} ({car.annee})</strong>
                 <div className="flex gap-2">
-                  <button onClick={() => handleEdit(car)} className="bg-yellow-500 text-white px-3 py-2 rounded hover:bg-yellow-600">Modifier</button>
-                  <button onClick={() => handleDelete(car.id)} className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600">Supprimer</button>
+                  <button onClick={() => handleEdit(car)} className="bg-yellow-500 text-white px-3 py-2 rounded hover:bg-yellow-600">
+                    Modifier
+                  </button>
+                  <button onClick={() => handleDelete(car.id)} className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600">
+                    Supprimer
+                  </button>
                 </div>
               </div>
-              <p><strong>Plaque d'immatriculation :</strong> {car.plaqueImmatriculation}</p>
-              <p><strong>Date d'entrée :</strong> {new Date(car.dateEntree).toLocaleDateString()}</p>
+              <p><strong>Plaque :</strong> {car.plaqueImmatriculation}</p>
+              <p><strong>Entrée :</strong> {new Date(car.dateEntree).toLocaleDateString()}</p>
               <p><strong>Statut :</strong> {car.statut}</p>
               <p><strong>Client :</strong> {car.clientId}</p>
+              <p><strong>Abonnement :</strong> {car.abonnements?.[0]?.type || "—"}</p>
             </li>
           ))}
         </ul>
