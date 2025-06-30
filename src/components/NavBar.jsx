@@ -24,7 +24,7 @@ export default function NavBar() {
       </div>
 
       <ul className={`mt-3 md:mt-0 md:flex gap-4 ${menuOpen ? 'block' : 'hidden'} md:block`}>
-        {/* Si connecté */}
+        {/* Si connecté en tant que client */}
         {user?.role === 'client' && (
           <>
             <li><Link to="/cars">🚗 Voitures</Link></li>
@@ -34,16 +34,18 @@ export default function NavBar() {
           </>
         )}
 
+        {/* Si connecté en tant qu'admin */}
         {user?.role === 'admin' && (
           <>
             <li><Link to="/admin">🛠️ Admin</Link></li>
             <li><Link to="/admin/users">👥 Utilisateurs</Link></li>
             <li><Link to="/admin/cars">🚗 Voitures Admin</Link></li>
             <li><Link to="/admin/tickets">📋 Tickets Admin</Link></li>
+            <li><Link to="/admin/reservations">📅 Réservations Admin</Link></li>
           </>
         )}
 
-        {/* Auth */}
+        {/* Lien de connexion/déconnexion */}
         {!user && <li><Link to="/login">🔐 Connexion</Link></li>}
         {user && (
           <li>

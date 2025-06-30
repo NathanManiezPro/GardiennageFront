@@ -17,6 +17,7 @@ import UsersList from './pages/admin/UsersList';
 import CarsAdmin from './pages/admin/CarsAdmin';
 import TicketsAdmin from './pages/admin/TicketsAdmin';
 import TicketsDetailAdmin from './pages/admin/TicketsDetailAdmin';
+import ReservationsAdmin from './pages/admin/ReservationsAdmin';
 
 function App() {
   return (
@@ -24,10 +25,10 @@ function App() {
       <NavBar />
       <div style={{ padding: '1rem' }}>
         <Routes>
-          {/* Public Routes */}
+          {/* Public */}
           <Route path="/login" element={<Login />} />
 
-          {/* Authenticated Routes (client or admin) */}
+          {/* Authenticated (client OR admin) */}
           <Route
             path="/"
             element={
@@ -37,7 +38,7 @@ function App() {
             }
           />
 
-          {/* Client Routes */}
+          {/* Client */}
           <Route
             path="/cars"
             element={
@@ -46,17 +47,19 @@ function App() {
               </RequireClient>
             }
           />
+
+          {/* Création de ticket (redirigé depuis Subscription.jsx) */}
           <Route
-            path="/tickets"
+            path="/tickets/create"
             element={
               <RequireClient>
                 <Tickets />
               </RequireClient>
             }
           />
-          {/* Création de ticket (redirigé depuis Subscription.jsx) */}
+
           <Route
-            path="/tickets/create"
+            path="/tickets"
             element={
               <RequireClient>
                 <Tickets />
@@ -80,7 +83,7 @@ function App() {
             }
           />
 
-          {/* Admin Routes */}
+          {/* Admin */}
           <Route
             path="/admin"
             element={
@@ -113,12 +116,19 @@ function App() {
               </RequireAdmin>
             }
           />
-          {/* Détail / réponse admin d’un ticket */}
           <Route
             path="/admin/tickets/:id"
             element={
               <RequireAdmin>
                 <TicketsDetailAdmin />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/reservations"
+            element={
+              <RequireAdmin>
+                <ReservationsAdmin />
               </RequireAdmin>
             }
           />

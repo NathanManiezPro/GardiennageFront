@@ -1,3 +1,4 @@
+// src/pages/Login.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
@@ -5,51 +6,76 @@ import api from '../api/axios';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setError('');
     try {
       const res = await api.post('/users/login', { email, password });
       const { token, user } = res.data;
-
-      if (!user || !token) {
-        alert('Erreur de connexion');
+      if (!token || !user) {
+        setError('Erreur de connexion');
         return;
       }
-
-      // 🔐 Stockage dans un seul objet
       localStorage.setItem('user', JSON.stringify({ ...user, token }));
-
-      // 🔀 Redirection selon le rôle
-      if (user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/cars');
-      }
-    } catch (err) {
-      console.error('Erreur connexion :', err);
-      alert('Identifiants incorrects');
+      navigate(user.role === 'admin' ? '/admin' : '/cars');
+    } catch {
+      setError('Adresse email ou mot de passe incorrect');
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>🔐 Connexion</h2>
-      <input
-        type="email"
-        placeholder="Adresse email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <input
-        type="password"
-        placeholder="Mot de passe"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <button type="submit">Se connecter</button>
-    </form>
+    <div className="min-h-screen bg-gray-50 flex items-start justify-center pt-20 p-4">
+      <div className="w-full max-w-sm bg-white rounded-xl shadow-md p-6">
+        <h1 className="text-2xl font-bold text-center mb-6">🔐 Connexion</h1>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-800 rounded">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Adresse email
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              placeholder="exemple@domaine.com"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Mot de passe
+            </label>
+            <input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 text-white font-medium py-2 rounded-md hover:bg-indigo-700 transition"
+          >
+            Se connecter
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
