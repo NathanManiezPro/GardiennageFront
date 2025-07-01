@@ -1,5 +1,8 @@
+// src/pages/admin/UsersList.jsx
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
+
+const PASSWORD_REGEX = /^(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
 
 export default function UsersList() {
   const [users, setUsers] = useState([]);
@@ -16,6 +19,9 @@ export default function UsersList() {
     password: "",
     role: "client",
   });
+
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchUsers();
@@ -36,24 +42,41 @@ export default function UsersList() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setMessage("");
+
+    // Validate password if provided
+    if (newUser.password && !PASSWORD_REGEX.test(newUser.password)) {
+      setError(
+        "Le mot de passe doit comporter au moins 8 caractères, dont 1 chiffre et 1 caractère spécial."
+      );
+      return;
+    }
+
     try {
       if (editingId) {
         const dataToUpdate = { ...newUser };
         if (!dataToUpdate.password) delete dataToUpdate.password;
         await api.put(`/users/${editingId}`, dataToUpdate);
+        setMessage("Utilisateur mis à jour avec succès.");
       } else {
         await api.post("/users/register", newUser);
+        setMessage("Utilisateur créé avec succès.");
       }
+      // reset form
       setEditingId(null);
       setNewUser({ nom: "", email: "", telephone: "", password: "", role: "client" });
       fetchUsers();
     } catch (err) {
+      setError(err.response?.data?.message || "Erreur création/modification utilisateur.");
       console.error("Erreur création/modification utilisateur :", err);
     }
   };
 
   const handleEdit = (user) => {
     setEditingId(user.id);
+    setMessage("");
+    setError("");
     setNewUser({
       nom: user.nom,
       email: user.email,
@@ -105,6 +128,18 @@ export default function UsersList() {
       <div className="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md">
         <h2 className="text-3xl font-semibold mb-6">👥 Liste des utilisateurs</h2>
 
+        {/* Messages */}
+        {message && (
+          <div className="mb-4 p-3 bg-green-100 text-green-800 rounded">
+            {message}
+          </div>
+        )}
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-800 rounded">
+            {error}
+          </div>
+        )}
+
         {/* FORMULAIRE */}
         <form
           onSubmit={handleSubmit}
@@ -124,6 +159,7 @@ export default function UsersList() {
           <input
             className="border rounded px-3 py-2"
             name="email"
+            type="email"
             placeholder="Email"
             value={newUser.email}
             onChange={handleChange}
@@ -166,6 +202,8 @@ export default function UsersList() {
                 className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
                 onClick={() => {
                   setEditingId(null);
+                  setMessage("");
+                  setError("");
                   setNewUser({ nom: "", email: "", telephone: "", password: "", role: "client" });
                 }}
               >
@@ -209,10 +247,16 @@ export default function UsersList() {
                     <td className="p-3 border">{u.telephone}</td>
                     <td className="p-3 border capitalize">{u.role}</td>
                     <td className="p-3 border flex gap-2">
-                      <button onClick={() => handleEdit(u)} className="text-blue-600 hover:text-blue-800">
+                      <button
+                        onClick={() => handleEdit(u)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
                         ✏️
                       </button>
-                      <button onClick={() => handleDelete(u.id)} className="text-red-600 hover:text-red-800">
+                      <button
+                        onClick={() => handleDelete(u.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
                         🗑
                       </button>
                     </td>
@@ -247,5 +291,5 @@ export default function UsersList() {
         )}
       </div>
     </div>
-);
+  );
 }

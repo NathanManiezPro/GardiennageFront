@@ -11,6 +11,7 @@ import Tickets from './pages/Tickets';
 import Reservations from './pages/Reservations';
 import Subscriptions from './pages/Subscriptions';
 import Login from './pages/Login';
+import Profile from './pages/Profile';              // ← import ajouté
 
 import Dashboard from './pages/admin/Dashboard';
 import UsersList from './pages/admin/UsersList';
@@ -37,6 +38,15 @@ function App() {
               </RequireAuth>
             }
           />
+          {/* Page Profil */}
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <Profile />
+              </RequireAuth>
+            }
+          />
 
           {/* Client */}
           <Route
@@ -47,8 +57,6 @@ function App() {
               </RequireClient>
             }
           />
-
-          {/* Création de ticket (redirigé depuis Subscription.jsx) */}
           <Route
             path="/tickets/create"
             element={
@@ -57,7 +65,6 @@ function App() {
               </RequireClient>
             }
           />
-
           <Route
             path="/tickets"
             element={
