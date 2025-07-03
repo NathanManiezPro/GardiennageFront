@@ -89,9 +89,19 @@ export default function Tickets() {
   const renderBadge = (s) => {
     const status = s === "Fermé" ? "Résolu" : s;
     const base = "text-sm font-medium px-2 py-1 rounded-full";
-    if (status === "Résolu") return <span className={`${base} bg-green-100 text-green-800`}>Résolu</span>;
-    if (status === "En cours de traitement") return <span className={`${base} bg-yellow-100 text-yellow-800`}>En cours de traitement</span>;
-    return <span className={`${base} bg-gray-100 text-gray-800`}>{status}</span>;
+    if (status === "Résolu")
+      return (
+        <span className={`${base} bg-green-100 text-green-800`}>Résolu</span>
+      );
+    if (status === "En cours de traitement")
+      return (
+        <span className={`${base} bg-yellow-100 text-yellow-800`}>
+          En cours de traitement
+        </span>
+      );
+    return (
+      <span className={`${base} bg-gray-100 text-gray-800`}>{status}</span>
+    );
   };
 
   return (
@@ -105,8 +115,11 @@ export default function Tickets() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Type */}
           <div>
-            <label className="block font-medium mb-1">Type de demande</label>
+            <label htmlFor="typeOfDemand" className="block font-medium mb-1">
+              Type de demande
+            </label>
             <select
+              id="typeOfDemand"
               value={type}
               onChange={(e) => {
                 setType(e.target.value);
@@ -126,8 +139,11 @@ export default function Tickets() {
           {/* Nature abonnement */}
           {type === "Abonnement" && (
             <div>
-              <label className="block font-medium mb-1">Nature de la demande d’abonnement</label>
-              <select
+              <label htmlFor="natureAbonnement" className="block font-medium mb-1">
+                Nature de la demande d’abonnement
+              </label>
+              <select 
+              id="natureAbonnement"
                 value={abonnementAction}
                 onChange={(e) => {
                   setAbonnementAction(e.target.value);
@@ -151,8 +167,11 @@ export default function Tickets() {
           {/* Choix nouvel abonnement */}
           {type === "Abonnement" && abonnementAction === "changement" && (
             <div>
-              <label className="block font-medium mb-1">Abonnement souhaité</label>
+              <label htmlFor="abonnementSouhait"className="block font-medium mb-1">
+                Abonnement souhaité
+              </label>
               <select
+              id="abonnementSouhait"
                 value={subscriptionChoice}
                 onChange={(e) => setSubscriptionChoice(e.target.value)}
                 className="w-full border border-gray-300 rounded px-3 py-2 mb-1"
@@ -173,8 +192,9 @@ export default function Tickets() {
 
           {/* Voiture */}
           <div>
-            <label className="block font-medium mb-1">Voiture concernée</label>
+            <label htmlFor="voitureConcerne" className="block font-medium mb-1">Voiture concernée</label>
             <select
+            id="voitureConcerne"
               value={voitureId}
               onChange={(e) => setVoitureId(e.target.value)}
               className="w-full border border-gray-300 rounded px-3 py-2"
@@ -191,8 +211,9 @@ export default function Tickets() {
 
           {/* Message */}
           <div>
-            <label className="block font-medium mb-1">Message</label>
+            <label htmlFor="messageTicket"className="block font-medium mb-1">Message</label>
             <textarea
+            id="messageTicket"
               rows="4"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -213,16 +234,23 @@ export default function Tickets() {
 
       {/* Historique des tickets */}
       <div className="max-w-3xl mx-auto">
-        <h2 className="text-3xl font-bold mb-6">📜 Historique de vos tickets</h2>
+        <h2 className="text-3xl font-bold mb-6">
+          📜 Historique de vos tickets
+        </h2>
 
         {tickets.length === 0 ? (
-          <p className="text-center text-gray-600">Vous n’avez encore aucun ticket.</p>
+          <p className="text-center text-gray-600">
+            Vous n’avez encore aucun ticket.
+          </p>
         ) : (
           <div className="space-y-6">
             {tickets
-              .sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation))
+              .sort(
+                (a, b) => new Date(b.dateCreation) - new Date(a.dateCreation)
+              )
               .map((t) => {
-                const isResolved = t.statut === "Fermé" || t.statut === "Résolu";
+                const isResolved =
+                  t.statut === "Fermé" || t.statut === "Résolu";
                 return (
                   <div
                     key={t.id}
@@ -260,11 +288,15 @@ export default function Tickets() {
                     )}
 
                     {/* "+ Ajouter une précision" uniquement si pas encore de clientResponse ET pas résolu */}
-                    {!t.clientResponse && !isResolved && (
-                      !showPrecision[t.id] ? (
+                    {!t.clientResponse &&
+                      !isResolved &&
+                      (!showPrecision[t.id] ? (
                         <button
                           onClick={() =>
-                            setShowPrecision((prev) => ({ ...prev, [t.id]: true }))
+                            setShowPrecision((prev) => ({
+                              ...prev,
+                              [t.id]: true,
+                            }))
                           }
                           className="text-blue-600 hover:underline text-sm mb-2"
                         >
@@ -291,8 +323,7 @@ export default function Tickets() {
                             Envoyer ma précision
                           </button>
                         </div>
-                      )
-                    )}
+                      ))}
                   </div>
                 );
               })}

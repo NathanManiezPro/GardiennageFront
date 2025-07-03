@@ -27,7 +27,7 @@ export default function Cars() {
       <header className="mb-6">
         <h2 className="text-3xl font-bold flex items-center">
           <span className="mr-2">🚗</span>
-          Mes voitures
+          <p>Mes voitures</p>
         </h2>
       </header>
 

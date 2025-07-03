@@ -11,39 +11,42 @@ export default function Reservations() {
   const [time, setTime] = useState("");
   const [error, setError] = useState("");
 
-  const user = JSON.parse(localStorage.getItem("user"));
-
+  // Charge voitures + réservations une seule fois au montage
   useEffect(() => {
-    fetchVoitures();
-    fetchReservations();
-  }, []);
+    const user = JSON.parse(localStorage.getItem("user"));
 
-  async function fetchVoitures() {
-    try {
-      const { data } = await api.get("/cars/my-cars");
-      setVoitures(data);
-    } catch {
-      setError("Impossible de charger vos voitures.");
+    async function loadData() {
+      try {
+        const { data: cars } = await api.get("/cars/my-cars");
+        setVoitures(cars);
+      } catch {
+        setError("Impossible de charger vos voitures.");
+      }
+
+      try {
+        const { data: allRes } = await api.get("/reservations");
+        if (user) {
+          const filtered = allRes
+            .filter((r) => r.clientId === user.id)
+            .sort((a, b) => new Date(b.dateHeure) - new Date(a.dateHeure));
+          setReservations(filtered);
+        }
+      } catch {
+        setError("Impossible de charger vos réservations.");
+      }
     }
-  }
 
-  async function fetchReservations() {
-    try {
-      const { data } = await api.get("/reservations");
-      setReservations(
-        data.filter((r) => r.clientId === user.id).sort((a, b) => new Date(b.dateHeure) - new Date(a.dateHeure))
-      );
-    } catch {
-      setError("Impossible de charger vos réservations.");
-    }
-  }
+    loadData();
+  }, []); // plus aucune dépendance manquante
 
+  // Envoi d’une nouvelle réservation
   async function handleSubmit(e) {
     e.preventDefault();
     if (!voitureId || !date || !time) {
       setError("Tous les champs sont requis.");
       return;
     }
+    const user = JSON.parse(localStorage.getItem("user"));
     try {
       const dateHeure = new Date(`${date}T${time}`);
       await api.post("/reservations", {
@@ -51,13 +54,26 @@ export default function Reservations() {
         clientId: user.id,
         dateHeure,
       });
+      // reset du formulaire
       setVoitureId("");
       setDate("");
       setTime("");
-      fetchReservations();
+      // recharge l’historique
+      const { data: allRes } = await api.get("/reservations");
+      const filtered = allRes
+        .filter((r) => r.clientId === user.id)
+        .sort((a, b) => new Date(b.dateHeure) - new Date(a.dateHeure));
+      setReservations(filtered);
     } catch {
       setError("Erreur lors de l'envoi de la réservation.");
     }
+  }
+
+  // Extrait la logique de style du badge pour éviter le nested ternary
+  function getStatusClasses(statut) {
+    if (statut === "Accepté") return "bg-green-100 text-green-800";
+    if (statut === "Refusé") return "bg-red-100 text-red-800";
+    return "bg-gray-100 text-gray-800";
   }
 
   return (
@@ -70,8 +86,11 @@ export default function Reservations() {
         {error && <div className="text-red-600 mb-4">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block font-medium mb-1">Voiture</label>
+            <label htmlFor="voiture" className="block font-medium mb-1">
+              Voiture
+            </label>
             <select
+              id="voiture"
               className="w-full border border-gray-300 rounded px-3 py-2"
               value={voitureId}
               onChange={(e) => setVoitureId(e.target.value)}
@@ -88,8 +107,11 @@ export default function Reservations() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block font-medium mb-1">Date</label>
+              <label htmlFor="date" className="block font-medium mb-1">
+                Date
+              </label>
               <input
+                id="date"
                 type="date"
                 className="w-full border border-gray-300 rounded px-3 py-2"
                 value={date}
@@ -98,8 +120,11 @@ export default function Reservations() {
               />
             </div>
             <div>
-              <label className="block font-medium mb-1">Heure</label>
+              <label htmlFor="time" className="block font-medium mb-1">
+                Heure
+              </label>
               <input
+                id="time"
                 type="time"
                 className="w-full border border-gray-300 rounded px-3 py-2"
                 value={time}
@@ -133,16 +158,15 @@ export default function Reservations() {
                 <div className="flex justify-between items-center mb-2">
                   <p className="text-lg font-semibold">
                     {new Date(r.dateHeure).toLocaleDateString()} à{" "}
-                    {new Date(r.dateHeure).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(r.dateHeure).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
                   <span
-                    className={`px-2 inline-block text-xs font-medium rounded-full ${
-                      r.statut === "Accepté"
-                        ? "bg-green-100 text-green-800"
-                        : r.statut === "Refusé"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
+                    className={`px-2 inline-block text-xs font-medium rounded-full ${getStatusClasses(
+                      r.statut
+                    )}`}
                   >
                     {r.statut}
                   </span>
@@ -158,5 +182,5 @@ export default function Reservations() {
         )}
       </div>
     </div>
-);
+  );
 }

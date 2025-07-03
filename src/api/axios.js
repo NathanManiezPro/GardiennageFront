@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: 'http://localhost:3002',
   // ❌ Supprime "withCredentials" car on utilise des tokens JWT en Authorization header
 });
 

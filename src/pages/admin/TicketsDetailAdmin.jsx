@@ -136,19 +136,23 @@ export default function TicketsDetailAdmin() {
         )}
       </div>
 
-      {/* Changer le statut */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <label className="block font-medium mb-1">Changer le statut</label>
-        <select
-          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          value={statut}
-          onChange={(e) => setStatut(e.target.value)}
-        >
-          <option value="En attente">En attente</option>
-          <option value="En cours de traitement">En cours de traitement</option>
-          <option value="Résolu">Résolu</option>
-        </select>
-      </div>
+   {/* Changer le statut */}
+<div className="bg-white p-4 rounded-lg shadow mb-6">
+  <label htmlFor="statut" className="block font-medium mb-1">
+    Changer le statut
+  </label>
+  <select
+    id="statut"
+    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+    value={statut}
+    onChange={(e) => setStatut(e.target.value)}
+  >
+    <option value="En attente">En attente</option>
+    <option value="En cours de traitement">En cours de traitement</option>
+    <option value="Résolu">Résolu</option>
+  </select>
+</div>
+
 
       {/* Enregistrer */}
       <button
