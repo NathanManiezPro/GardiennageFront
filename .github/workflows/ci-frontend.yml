@@ -1,0 +1,47 @@
+name: CI Frontend
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=nathanmaniezpro
+            -Dsonar.projectKey=NathanManiezPro_GardiennageFront
+            -Dsonar.sources=src
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" \
+             docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ghcr.io/${{ secrets.DOCKER_USERNAME }}/gardiennagefront-frontend:latest .
+
+      - name: Push Docker image
+        run: docker push ghcr.io/${{ secrets.DOCKER_USERNAME }}/gardiennagefront-frontend:latest
